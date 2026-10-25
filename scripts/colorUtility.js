@@ -56,7 +56,8 @@ function updateColorFromVals(obj, index) {
             rgb.push(parent.getElementsByClassName(`${classBase}${newIndex}`)[0].value);
         }
         rgb = arrayToRGB(rgb);
-        obj.parentElement.getElementsByClassName(classBase + "i")[0].value = rgb;
+        let selector = parent.getElementsByClassName(classBase + "i")[0];
+        if (selector != undefined) selector.value = rgb;
         updateBackgroundColor(obj, index, rgb);
     }
 
