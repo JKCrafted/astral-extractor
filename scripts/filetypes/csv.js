@@ -67,6 +67,7 @@ function loadInitialCSV(fileTypes, file, translateView = false) {
           form += "<tr>"
           var color = "transparent";
           var setColors = [];
+          var colorIndex = -1;
           for (var x = 0; x < lines[i].length; x++) {
             // items in line
             let unitext = lines[i][x]
@@ -89,10 +90,13 @@ function loadInitialCSV(fileTypes, file, translateView = false) {
             }
             form += `<th style="background-color: ${color}">`;
             if (!translateView) {
-              if (x % 3 == 1 && color != "transparent") {
-                form += `<input class="${file.name}-i" type="color" value='${color}' onChange='updateColor(this,${x})'></input>`;
+              if (x % 3 == 1) {
+                if (color != "transparent") form += `<input class="${file.name}-i" type="color" value='${color}' onChange='updateValsFromColor(this,${x})'></input>`;
+                colorIndex = x;
               }
-              form += `<input class="${file.name}-${x}" type="text" value='${unitext}'></input></th>`;
+              form += `<input class="${file.name}-${x}" type="text" value='${unitext}'`;
+              if (colorIndex > 0) form += `onChange='updateColorFromVals(this,${colorIndex})'>`;
+              form += `</input></th>`;
             } else {
               if (unitext.length == 0) {
                 form += `<span class="csv-text" style="background-color: transparent" class="${file.name}-${x}" type="text">`
@@ -113,7 +117,6 @@ function loadInitialCSV(fileTypes, file, translateView = false) {
             }
 
           }
-          console.log(setColors);
           output.push(currentLine);
           form += "</tr>";
 
@@ -137,7 +140,7 @@ function loadInitialCSV(fileTypes, file, translateView = false) {
   });
 }
 
-function updateColor(obj, index) {
+function updateValsFromColor(obj, index) {
   index = parseInt(index);
   var parent = obj.parentElement.parentElement;
   let classBase = obj.classList[0].slice(0, -1);
@@ -145,16 +148,46 @@ function updateColor(obj, index) {
     let newObj = parent.children[index + i];
     newObj.style.backgroundColor = obj.value;
     let newIndex = parseInt(index) + i;
-    newObj.getElementsByClassName(`${classBase}${newIndex}`)[0].value = RGBtoArray(newObj.style.backgroundColor)[i];
+    newObj.getElementsByClassName(`${classBase}${newIndex}`)[0].value = RGBToArray(newObj.style.backgroundColor)[i];
   }
 }
 
-function RGBtoArray(input)
-{
-  input = (input.replaceAll("rgb",""));
-  input = input.slice(1,-1).replaceAll(" ","");
+function updateColorFromVals(obj, index) {
+  if (obj.value.length > 0) {
+    index = parseInt(index);
+    var parent = obj.parentElement.parentElement;
+    let classBase = obj.classList[0].slice(0, -1);
+    let newObjs = [];
+    let rgb = [];
+    for (let i = 0; i < 3; i++) {
+      newObjs.push(parent.children[index + i]);
+      let newIndex = parseInt(index) + i;
+      rgb.push(parent.getElementsByClassName(`${classBase}${newIndex}`)[0].value);
+    }
+    rgb = arrayToRGB(rgb);
+    obj.parentElement.getElementsByClassName(classBase + "i")[0].value = rgb;
+    updateBackgroundColor(obj, index, rgb);
+  }
+
+}
+
+function updateBackgroundColor(obj, index, color) {
+  var parent = obj.parentElement.parentElement;
+  index = parseInt(index);
+  for (let i = 0; i < 3; i++) {
+    parent.children[index + i].style.backgroundColor = color;
+  }
+}
+
+function RGBToArray(input) {
+  input = (input.replaceAll("rgb", ""));
+  input = input.slice(1, -1).replaceAll(" ", "");
   input = input.split(",");
   return input;
+}
+
+function arrayToRGB(input) {
+  return `rgb(${input})`;
 }
 
 function setColor(r, g, b) {
@@ -162,7 +195,7 @@ function setColor(r, g, b) {
   try {
     let rgb = [parseInt(r), parseInt(g), parseInt(b)];
     if (!rgb.includes(NaN)) {
-      color = `rgb(${rgb})`
+      color = arrayToRGB(rgb);
     } else {
       color = 'transparent';
     }
