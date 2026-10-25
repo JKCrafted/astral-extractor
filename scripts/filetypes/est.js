@@ -1,3 +1,6 @@
+var workingESTFiles = {};
+
+
 function loadInitialEST(fileTypes, file, translateView = false) {
   return new Promise((resolve, reject) => {
     var reader = new FileReader();
@@ -6,7 +9,6 @@ function loadInitialEST(fileTypes, file, translateView = false) {
         var chunks = [];
 
         for (let i = 0; i < e.target.result.length; i++) {
-
           let character = e.target.result.charCodeAt(i).toString(16);
           if (character.length == 1) character = "0" + character;
           chunks.push(character);
@@ -90,9 +92,11 @@ function loadInitialEST(fileTypes, file, translateView = false) {
 
         form += "</tr></table></div>";
 
+        workingESTFiles[file.name] = hex_list;
+
 
         $('div[id="' + file.name + '"]').find('h4').append(` - ${lines.length} lines <a class='download' onclick="downloadCSV(\'csv\', '${file.name}', false)"><span class='material-icons'>insert_drive_file</span> DOWNLOAD CSV</a>`)
-        //$('div[id="' + file.name + '"]').find('h4').append(` <a class='repack' title='Repack the file into a game-ready EST.' onclick="downloadEST(\'est\', '${file.name}', true)"><span class='material-icons'>auto_fix_high</span> REPACK</a>`)
+        $('div[id="' + file.name + '"]').find('h4').append(` <a class='repack' title='Repack the file into a game-ready EST.' onclick="downloadEST('${file.name}')"><span class='material-icons'>auto_fix_high</span> REPACK</a>`)
         $('div[id="' + file.name + '"]').find('h4').prepend(`<a class='minimize' onclick="minimize(this)"><span class="material-icons">expand_less</span></a>`)
         $('div[id="' + file.name + '"]').find('h4').find('img').after(hamburgers['est'])
         $('div[id="' + file.name + '"]').append("<div id='files' class='scroll'>" + form + "</table></div>")
@@ -130,6 +134,29 @@ function parseESTHex() {
   return colour_data;
 }
 
-async function downloadEST() {
+async function downloadEST(fileName) {
+
+  let hex = workingESTFiles["fileName"];
+
+  let baseDiv = document.getElementById(fileName);
+
+  let inputs = baseDiv.getElementsByTagName("input");
+
+  for (let i = 0; i < inputs.length; i++) {
+    if (inputs[i].type == "text") {
+      if (inputs[i].classList[0].includes("rgb")) hex[parseInt(inputs[i].getAttribute("hexpos"))] = colorValToHex(inputs[i].value);
+      else hex[parseInt(inputs[i].getAttribute("hexpos"))+1] = colorValToHex(inputs[i].value);
+    }
+  }
+
+
+  let binary = parseInt(hex.join(""), 10).toString(2);
+
+  let blob = new Blob([binary], { type: "application/text" });
+
+  saveAs(blob, fileName);
+  
 
 }
+
+
