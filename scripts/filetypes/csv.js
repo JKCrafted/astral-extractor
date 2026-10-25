@@ -73,9 +73,6 @@ function loadInitialCSV(fileTypes, file, translateView = false) {
             unitext = decoder.decode(unitext.buffer);
             var color = 'transparent';
             if (file.name.includes("Color")) {
-              console.log(lines[i].length);
-              console.log((x + 1) % 3);
-              console.log((x + 3));
               if (((x + 1) % 3 == 1) && (x + 3) < lines[i].length) {
                 let newColor = setColor(decoder.decode(lines[i][x + 1].buffer), decoder.decode(lines[i][x + 2].buffer), decoder.decode(lines[i][x + 3].buffer));
                 if (x == 0) setColors.push(color);
@@ -93,7 +90,7 @@ function loadInitialCSV(fileTypes, file, translateView = false) {
             form += `<th style="background-color: ${color}">`;
             if (!translateView) {
               if (x % 3 == 1 && color != "transparent") {
-                form += `<input class="${file.name}-${x}" type="color" value='${color}'></input>`;
+                form += `<input class="${file.name}-i" type="color" value='${color}' onChange='updateColor(this,${x})'></input>`;
               }
               form += `<input class="${file.name}-${x}" type="text" value='${unitext}'></input></th>`;
             } else {
@@ -138,6 +135,26 @@ function loadInitialCSV(fileTypes, file, translateView = false) {
 
     reader.readAsArrayBuffer(file)
   });
+}
+
+function updateColor(obj, index) {
+  index = parseInt(index);
+  var parent = obj.parentElement.parentElement;
+  let classBase = obj.classList[0].slice(0, -1);
+  for (let i = 0; i < 3; i++) {
+    let newObj = parent.children[index + i];
+    newObj.style.backgroundColor = obj.value;
+    let newIndex = parseInt(index) + i;
+    newObj.getElementsByClassName(`${classBase}${newIndex}`)[0].value = RGBtoArray(newObj.style.backgroundColor)[i];
+  }
+}
+
+function RGBtoArray(input)
+{
+  input = (input.replaceAll("rgb",""));
+  input = input.slice(1,-1).replaceAll(" ","");
+  input = input.split(",");
+  return input;
 }
 
 function setColor(r, g, b) {
