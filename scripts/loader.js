@@ -136,6 +136,7 @@ function loadInitial(fileType, file) {
         break;
       case "est":
         await loadInitialEST('est', file);
+        break;
       default:
         window.alert("Unsupported file type!")
     }
