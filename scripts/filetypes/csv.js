@@ -10,8 +10,8 @@ function convertCSVtoArray(buffer) {
       // comma
       returningItem.push(Uint8Array.from(individualList));
       individualList = [];
-      z ++;
-    } else if (arr[i] == 13 && arr[i+1] == 10) {
+      z++;
+    } else if (arr[i] == 13 && arr[i + 1] == 10) {
       // new line
       returningItem.push(Uint8Array.from(individualList));
       returning.push(returningItem);
@@ -51,10 +51,10 @@ function formatChars(text) {
   return encoder.encode(text);
 }
 
-function loadInitialCSV(fileTypes, file, translateView=false) {
+function loadInitialCSV(fileTypes, file, translateView = false) {
   return new Promise((resolve, reject) => {
     var reader = new FileReader();
-    reader.onloadend = function(e) {
+    reader.onloadend = function (e) {
       if (e.target.readyState == FileReader.DONE) {
         var [lines, maxLengthLength] = convertCSVtoArray(e.target.result);
         var maxLength = new Array(maxLengthLength).fill(1)
@@ -66,47 +66,57 @@ function loadInitialCSV(fileTypes, file, translateView=false) {
           var currentLine = [];
           form += "<tr>"
           var color = "transparent";
-          var lastSetColor = -10;
+          var setColors = [];
           for (var x = 0; x < lines[i].length; x++) {
             // items in line
             let unitext = lines[i][x]
             unitext = decoder.decode(unitext.buffer);
-            var color;
+            var color = 'transparent';
             if (file.name.includes("Color")) {
-              if (x - lastSetColor > 2 && (x % 3 == 1 || ['LegionColorPreset.csv', 'LegionColorSet.csv', 'CharacterCustomizeColorSet.csv'].includes(file.name))) {
-                try {
-                  rgb = [parseInt(unitext), parseInt(decoder.decode(lines[i][x+1].buffer)), parseInt(decoder.decode(lines[i][x+2].buffer))]
-                  if (!rgb.includes(NaN)) {
-                    color = `rgb(${rgb})`
-                    lastSetColor = x;
-                  } else {
-                    color = 'transparent';
-                  }
-                } catch {
-                  color = 'transparent';
-                }
-              } else if (x - lastSetColor > 2) {
-                color = 'transparent'
+              console.log(lines[i].length);
+              console.log((x + 1) % 3);
+              console.log((x + 3));
+              if (((x + 1) % 3 == 1) && (x + 3) < lines[i].length) {
+                let newColor = setColor(decoder.decode(lines[i][x + 1].buffer), decoder.decode(lines[i][x + 2].buffer), decoder.decode(lines[i][x + 3].buffer));
+                if (x == 0) setColors.push(color);
+                setColors.push(newColor);
+                setColors.push(newColor);
+                setColors.push(newColor);
+              }
+              if (setColors.length > x) {
+                color = setColors[x];
+              }
+              else {
+                setColors.push(color);
               }
             }
+            form += `<th style="background-color: ${color}">`;
             if (!translateView) {
-              form += `<th style="background-color: ${color}"><input class="${file.name}-${x}" type="text" value='${unitext}'></input></th>`;
+              if (x % 3 == 1 && color != "transparent") {
+                form += `<input class="${file.name}-${x}" type="color" value='${color}'></input>`;
+              }
+              form += `<input class="${file.name}-${x}" type="text" value='${unitext}'></input></th>`;
             } else {
               if (unitext.length == 0) {
-                form += `<th style="background-color: ${color}"><span class="csv-text" style="background-color: transparent" class="${file.name}-${x}" type="text"></span></th>`
+                form += `<span class="csv-text" style="background-color: transparent" class="${file.name}-${x}" type="text">`
               } else {
+                form += `<span class="csv-text" class="${file.name}-${x}" type="text" title="${unitext}">`;
                 if (unitext.startsWith("0x")) {
-                  form += `<th style="background-color: ${color}"><span class="csv-text" class="${file.name}-${x}" type="text" title="${unitext}">${itemLookup(unitext)}</span></th>`
+                  form += `${itemLookup(unitext)}`;
                 } else {
-                  form += `<th style="background-color: ${color}"><span class="csv-text" class="${file.name}-${x}" type="text" title="${unitext}">${lookup(unitext)}</span></th>`
+                  form += `${lookup(unitext)}`;
                 }
+
               }
+              form += `</span></th>`;
             }
             currentLine.push(unitext);
             if (unitext.length > maxLength[x]) {
               maxLength[x] = unitext.length;
             }
+
           }
+          console.log(setColors);
           output.push(currentLine);
           form += "</tr>";
 
@@ -117,37 +127,53 @@ function loadInitialCSV(fileTypes, file, translateView=false) {
         $('div[id="' + file.name + '"]').find('h4').prepend(`<a class='minimize' onclick="minimize(this)"><span class="material-icons">expand_less</span></a>`)
         $('div[id="' + file.name + '"]').find('h4').find('img').after(hamburgers['csv'])
         $('div[id="' + file.name + '"]').append("<div id='files' class='scroll'>" + form + "</table></div>")
-        globalFiles[file.name] = {'fp': file, 'translateView': translateView}
-        if (translateView) {resolve(); return}
+        globalFiles[file.name] = { 'fp': file, 'translateView': translateView }
+        if (translateView) { resolve(); return }
         for (var i = 0; i < maxLengthLength; i++) {
           $(`input[class="${file.name}-${i}"]`).attr('size', maxLength[i])
         }
         resolve();
       }
     }
+
     reader.readAsArrayBuffer(file)
-  })
+  });
 }
 
-function downloadCSV(fileType, name, repack=false) {
+function setColor(r, g, b) {
+  var color;
+  try {
+    let rgb = [parseInt(r), parseInt(g), parseInt(b)];
+    if (!rgb.includes(NaN)) {
+      color = `rgb(${rgb})`
+    } else {
+      color = 'transparent';
+    }
+  } catch {
+    color = 'transparent';
+  }
+  return color;
+}
+
+function downloadCSV(fileType, name, repack = false) {
   var output = new Uint8Array();
   $(`div[id="${name}"`).find('tr').each(function (i, el) {
-      $(this).find('th').each(function (i, el) {
-        var itemstr;
-        if (globalFiles[name]['translateView']) {
-          itemstr = $(this).find('.csv-text').attr('title') + ",";
-        } else {
-          itemstr = $(this).find('input').val() + ","
-        }
-        if (repack) {
-          output = concatenateToUint8(output, convertChars(itemstr));
-        } else {
-          output = concatenateToUint8(output, formatChars(itemstr));
-        }
-      });
-      output = concatenateToUint8(output.slice(0, output.length-1), Uint8Array.from([13, 10]))
+    $(this).find('th').each(function (i, el) {
+      var itemstr;
+      if (globalFiles[name]['translateView']) {
+        itemstr = $(this).find('.csv-text').attr('title') + ",";
+      } else {
+        itemstr = $(this).find('input').val() + ","
+      }
+      if (repack) {
+        output = concatenateToUint8(output, convertChars(itemstr));
+      } else {
+        output = concatenateToUint8(output, formatChars(itemstr));
+      }
+    });
+    output = concatenateToUint8(output.slice(0, output.length - 1), Uint8Array.from([13, 10]))
   });
-  var blob = new Blob([output], {type: "application/text"})
+  var blob = new Blob([output], { type: "application/text" })
   saveAs(blob, name);
 }
 
